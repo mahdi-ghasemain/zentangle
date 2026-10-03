@@ -1,0 +1,10 @@
+.git
+node_modules
+.expo
+dist
+dist-native
+screenshots
+tests
+audit-report.json
+.env
+.env.*

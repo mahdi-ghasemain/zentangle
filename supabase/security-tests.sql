@@ -1,0 +1,10 @@
+-- Integration verification checklist; use two different authenticated users in different groups.
+-- 1. Anonymous REST SELECT from every public table must return no data.
+-- 2. Participant A cannot read Group B profiles, artworks, comments, meetings or signed media.
+-- 3. Participant A cannot UPDATE profiles.role or profiles.group_id, including their own row.
+-- 4. Participant A cannot INSERT/UPDATE meetings or lesson_content.
+-- 5. Therapist A can update content/meetings only in Group A.
+-- 6. Participant A cannot insert artwork paths owned by Participant B.
+-- 7. Participant A cannot insert progress for another user or skip an unfinished session.
+-- 8. Signed media URLs expire after 3600 seconds; the storage bucket must remain private.
+-- These require a deployed Supabase test project and must be run before production use.

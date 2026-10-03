@@ -1,0 +1,16 @@
+const fs = require("node:fs");
+const { chromium } = require("@playwright/test");
+const svg = `<svg xmlns="http://www.w3.org/2000/svg" width="1024" height="1024" viewBox="0 0 1024 1024"><rect width="1024" height="1024" fill="#246D52"/><circle cx="512" cy="512" r="380" fill="none" stroke="#C9D7BA" stroke-width="3" opacity=".45"/><g transform="translate(212 227) scale(6)" fill="none" stroke="#F9F1DD" stroke-width="2.1" stroke-linecap="round" stroke-linejoin="round"><path d="M50 70C24 52 38 24 50 9C64 28 75 52 50 70Z"/><path d="M50 70C24 70 15 49 13 32C35 34 49 46 50 70ZM50 70C76 70 85 49 87 32C65 34 51 46 50 70Z"/><path d="M50 73C25 83 9 66 5 52C24 50 39 56 50 73ZM50 73C75 83 91 66 95 52C76 50 61 56 50 73ZM34 83Q50 89 66 83"/></g></svg>`;
+(async () => {
+  fs.writeFileSync("assets/brand.svg", svg);
+  const browser = await chromium.launch({ channel: "msedge", headless: true });
+  const page = await browser.newPage({
+    viewport: { width: 1024, height: 1024 },
+  });
+  await page.setContent(`<style>body{margin:0}</style>${svg}`);
+  await page.screenshot({ path: "assets/icon.png" });
+  await browser.close();
+})().catch((e) => {
+  console.error(e);
+  process.exit(1);
+});

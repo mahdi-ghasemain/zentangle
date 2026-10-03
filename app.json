@@ -1,25 +1,46 @@
 {
   "expo": {
-    "name": "zentangle",
+    "plugins": [
+      "expo-router",
+      "expo-font",
+      "expo-video",
+      [
+        "expo-image-picker",
+        {
+          "cameraPermission": "برای گرفتن عکس نقاشی شما، اجازهٔ دوربین لازم است.",
+          "photosPermission": "برای انتخاب تصویر اثر شما، دسترسی به گالری لازم است."
+        }
+      ],
+      [
+        "expo-audio",
+        {
+          "microphonePermission": "برای ضبط داستان اثر شما، اجازهٔ میکروفن لازم است."
+        }
+      ],
+      "expo-asset"
+    ],
     "slug": "zentangle",
     "version": "1.0.0",
-    "orientation": "portrait",
+    "name": "هنر زندگی",
     "icon": "./assets/icon.png",
-    "userInterfaceStyle": "light",
+    "orientation": "portrait",
+    "web": {
+      "bundler": "metro",
+      "output": "single",
+      "favicon": "./assets/icon.png"
+    },
+    "userInterfaceStyle": "automatic",
+    "scheme": "zentangle",
     "ios": {
+      "bundleIdentifier": "app.honarezendegi.zentangle",
       "supportsTablet": true
     },
     "android": {
       "adaptiveIcon": {
-        "backgroundColor": "#E6F4FE",
-        "foregroundImage": "./assets/android-icon-foreground.png",
-        "backgroundImage": "./assets/android-icon-background.png",
-        "monochromeImage": "./assets/android-icon-monochrome.png"
+        "backgroundColor": "#F8F3E9",
+        "foregroundImage": "./assets/icon.png"
       },
-      "predictiveBackGestureEnabled": false
-    },
-    "web": {
-      "favicon": "./assets/favicon.png"
+      "package": "app.honarezendegi.zentangle"
     }
   }
 }
