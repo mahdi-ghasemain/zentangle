@@ -299,7 +299,7 @@ export function Calendar() {
             onPress={() => setMonth(month + 1)}
             style={{ padding: 12 }}
           >
-            <Icon name="chevron-forward" />
+            <Icon name="chevron-back" />
           </Pressable>
           <T bold size={20}>
             {new Intl.DateTimeFormat("fa-IR-u-ca-persian", {
@@ -312,7 +312,7 @@ export function Calendar() {
             onPress={() => setMonth(month - 1)}
             style={{ padding: 12 }}
           >
-            <Icon name="chevron-back" />
+            <Icon name="chevron-forward" />
           </Pressable>
         </Row>
         <View style={{ flexDirection: "row-reverse", flexWrap: "wrap" }}>
