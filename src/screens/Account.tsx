@@ -1,4 +1,6 @@
 import React, { useState } from "react";
+import ProfilePhoto from "../components/ProfilePhoto";
+import MeetingRoom from "../components/MeetingRoom";
 import { View, Pressable, Switch, Platform } from "react-native";
 import { router } from "expo-router";
 import * as Linking from "expo-linking";
@@ -50,7 +52,7 @@ export function Profile() {
   return (
     <Shell title="پروفایل من">
       <Row>
-        <Avatar sample={demo} size={82} />
+        <Avatar uri={data.avatar} sample={demo} size={82} />
         <View style={{ flex: 1 }}>
           <T bold size={24}>
             {data.name}
@@ -60,6 +62,13 @@ export function Profile() {
           </T>
         </View>
       </Row>
+      <ProfilePhoto />
+      <Button
+        secondary
+        icon="download-outline"
+        label="نصب برنامه روی گوشی"
+        onPress={() => router.push("/install")}
+      />
       <Row>
         {[
           { n: data.completed.length, t: "جلسه تکمیل‌شده" },
@@ -434,24 +443,31 @@ export function Meeting({ meetingId }: { meetingId: string }) {
           اثر خود را آماده کنید، در جای آرامی بنشینید و هنگام ورود اجازهٔ دوربین
           و میکروفن را در سرویس جلسه بررسی کنید.
         </T>
-        <Button
-          disabled={!meeting}
-          label="ورود به جلسهٔ آنلاین"
-          icon="videocam-outline"
-          onPress={async () => {
-            if (meeting && /^https:\/\//i.test(meeting.url)) {
-              try {
-                await Linking.openURL(meeting.url);
-              } catch {
-                notify("باز کردن پیوند جلسه ممکن نشد.");
-              }
-            } else notify("پیوند معتبر جلسه هنوز ثبت نشده است.");
-          }}
-        />
+        {meeting?.provider !== "livekit" && (
+          <Button
+            disabled={!meeting}
+            label="ورود به جلسهٔ آنلاین"
+            icon="videocam-outline"
+            onPress={async () => {
+              if (meeting && /^https:\/\//i.test(meeting.url)) {
+                try {
+                  await Linking.openURL(meeting.url);
+                } catch {
+                  notify("باز کردن پیوند جلسه ممکن نشد.");
+                }
+              } else notify("پیوند معتبر جلسه هنوز ثبت نشده است.");
+            }}
+          />
+        )}
         <T muted size={12}>
-          تماس در سرویس تعیین‌شده توسط درمانگر باز می‌شود.
+          {meeting?.provider === "livekit"
+            ? "تماس صوتی یا تصویری را در پایین انتخاب کنید."
+            : "تماس در سرویس تعیین‌شده توسط درمانگر باز می‌شود."}
         </T>
       </Card>
+      {meeting?.provider === "livekit" && (
+        <MeetingRoom key={meeting.id} meetingId={meeting.id} />
+      )}
     </Shell>
   );
 }

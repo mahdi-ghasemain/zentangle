@@ -1,4 +1,5 @@
 import React from "react";
+import Install from "../screens/Install";
 import { useLocalSearchParams, Redirect, router } from "expo-router";
 import { Welcome, Login } from "../screens/Welcome";
 import { Home, Sessions, Lesson, Guide, Practice } from "../screens/Learning";
@@ -27,6 +28,7 @@ export default function Screen() {
   }>();
   const screen = params.page;
   const { userId, demo, data } = useStore();
+  if (screen === "install") return <Install />;
   if (screen === "welcome") return <Welcome />;
   if (screen === "login") return userId ? <Redirect href="/home" /> : <Login />;
   if (!userId && !demo) return <Redirect href="/login" />;

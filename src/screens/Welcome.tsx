@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useEffect, useRef, useState } from "react";
 import { View, Image, Pressable, useWindowDimensions } from "react-native";
 import { router } from "expo-router";
 import { LinearGradient } from "expo-linear-gradient";
@@ -6,6 +6,7 @@ import { T, Button, Field, Row, Shell, useColors } from "../components/ui";
 import { Lotus, LeafArt, Botanical } from "../components/Art";
 import { useStore } from "../lib/store";
 import { supabase, isConfigured } from "../lib/supabase";
+import { latinDigits, normalizeIranPhone, phoneAuthError } from "../lib/phone";
 
 export function Welcome() {
   const [step, setStep] = useState(0);
@@ -111,52 +112,86 @@ export function Welcome() {
 
 export function Login() {
   const [signup, setSignup] = useState(false);
-  const [email, setEmail] = useState("");
-  const [password, setPassword] = useState("");
+  const [phone, setPhone] = useState("");
+  const [sentPhone, setSentPhone] = useState("");
+  const [code, setCode] = useState("");
   const [name, setName] = useState("");
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
   const [consent, setConsent] = useState(false);
-  const { enterDemo, notify } = useStore();
-  const submit = async () => {
+  const [retryAt, setRetryAt] = useState(0);
+  const [remaining, setRemaining] = useState(0);
+  const inFlight = useRef(false);
+  const { enterDemo } = useStore();
+  useEffect(() => {
+    const tick = () =>
+      setRemaining(Math.max(0, Math.ceil((retryAt - Date.now()) / 1000)));
+    tick();
+    const timer = setInterval(tick, 1000);
+    return () => clearInterval(timer);
+  }, [retryAt]);
+  const sendCode = async () => {
+    if (inFlight.current || Date.now() < retryAt) return;
     setError("");
-    if (!supabase) {
-      setError(
-        "ورود واقعی پس از اتصال سرویس فعال می‌شود. اکنون می‌توانید نسخهٔ آزمایشی را ببینید.",
-      );
-      return;
-    }
-    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email.trim())) {
-      setError("لطفاً یک نشانی ایمیل معتبر بنویسید.");
-      return;
-    }
-    if (password.length < 8) {
-      setError("رمز عبور باید حداقل ۸ نویسه داشته باشد.");
+    const normalized = normalizeIranPhone(phone);
+    if (!normalized) {
+      setError("شماره موبایل معتبر ایران را وارد کنید؛ مانند ۰۹۱۲۳۴۵۶۷۸۹.");
       return;
     }
     if (signup && (!name.trim() || !consent)) {
       setError("نام و موافقت با شرایط ثبت‌نام ضروری است.");
       return;
     }
+    if (!supabase) {
+      setError(
+        "ورود پیامکی هنوز فعال نشده است. می‌توانید نسخهٔ آزمایشی را ببینید.",
+      );
+      return;
+    }
+    inFlight.current = true;
     setBusy(true);
     try {
-      const result = signup
-        ? await supabase.auth.signUp({
-            email: email.trim(),
-            password,
-            options: { data: { display_name: name.trim() } },
-          })
-        : await supabase.auth.signInWithPassword({
-            email: email.trim(),
-            password,
-          });
-      if (result.error) throw result.error;
-      if (signup && !result.data.session)
-        notify("پیوند تأیید به ایمیل شما ارسال شد. پس از تأیید وارد شوید.");
-      else router.replace("/home");
-    } catch {
-      setError("ورود انجام نشد؛ اطلاعات حساب و اتصال اینترنت را بررسی کنید.");
+      const { error: authError } = await supabase.auth.signInWithOtp({
+        phone: normalized,
+        options: {
+          shouldCreateUser: signup,
+          ...(signup ? { data: { display_name: name.trim() } } : {}),
+        },
+      });
+      if (authError) throw authError;
+      setSentPhone(normalized);
+      setCode("");
+      setRetryAt(Date.now() + 60000);
+    } catch (e) {
+      setError(phoneAuthError(e));
     } finally {
+      inFlight.current = false;
+      setBusy(false);
+    }
+  };
+  const verifyCode = async () => {
+    if (inFlight.current || !supabase || !sentPhone) return;
+    setError("");
+    const token = latinDigits(code).trim();
+    if (!/^\d{6}$/.test(token)) {
+      setError("کد ۶ رقمی پیامک‌شده را وارد کنید.");
+      return;
+    }
+    inFlight.current = true;
+    setBusy(true);
+    try {
+      const { data, error: authError } = await supabase.auth.verifyOtp({
+        phone: sentPhone,
+        token,
+        type: "sms",
+      });
+      if (authError) throw authError;
+      if (!data.session) throw new Error("Missing session");
+      router.replace("/home");
+    } catch (e) {
+      setError(phoneAuthError(e, true));
+    } finally {
+      inFlight.current = false;
       setBusy(false);
     }
   };
@@ -165,100 +200,144 @@ export function Login() {
       <View style={{ alignItems: "center", gap: 7, marginBottom: 20 }}>
         <Lotus size={68} />
         <T bold size={29}>
-          {signup ? "به جمع ما خوش آمدید" : "ورود به حساب"}
+          {sentPhone
+            ? "کد تأیید را وارد کنید"
+            : signup
+              ? "به جمع ما خوش آمدید"
+              : "ورود با شماره موبایل"}
         </T>
         <T muted center>
-          برای ادامه، وارد شوید یا ثبت‌نام کنید.
+          {sentPhone
+            ? "کد تأیید به " + "0" + sentPhone.slice(3) + " ارسال شد."
+            : "با شماره موبایل و کد پیامکی وارد شوید."}
         </T>
       </View>
       <View style={{ gap: 14 }}>
-        {signup && (
+        {signup && !sentPhone && (
           <>
             <T size={14}>نام و نام خانوادگی</T>
             <Field
               value={name}
               onChangeText={setName}
+              editable={!busy}
+              maxLength={100}
               placeholder="نام شما"
               accessibilityLabel="نام و نام خانوادگی"
             />
           </>
         )}
-        <T size={14}>ایمیل</T>
-        <Field
-          value={email}
-          onChangeText={setEmail}
-          placeholder="example@email.com"
-          keyboardType="email-address"
-          autoCapitalize="none"
-          accessibilityLabel="ایمیل"
-        />
-        <T size={14}>رمز عبور</T>
-        <Field
-          value={password}
-          onChangeText={setPassword}
-          secureTextEntry
-          placeholder="حداقل ۸ نویسه"
-          accessibilityLabel="رمز عبور"
-          onSubmitEditing={submit}
-        />
-        {signup ? (
-          <Pressable
-            accessibilityRole="checkbox"
-            accessibilityState={{ checked: consent }}
-            onPress={() => setConsent(!consent)}
-          >
-            <T size={14}>
-              {consent ? "☑" : "☐"} می‌دانم آثارم برای اعضای گروه و درمانگر قابل
-              مشاهده است. این ثبت‌نام جایگزین رضایت‌نامهٔ پژوهش نیست.
-            </T>
-          </Pressable>
+        {sentPhone ? (
+          <>
+            <T size={14}>کد تأیید ۶ رقمی</T>
+            <Field
+              key="otp"
+              value={code}
+              onChangeText={(v) => setCode(latinDigits(v))}
+              placeholder="کد پیامک‌شده"
+              accessibilityLabel="کد تأیید"
+              keyboardType="number-pad"
+              autoComplete="one-time-code"
+              maxLength={6}
+              editable={!busy}
+              style={{
+                textAlign: "center",
+                writingDirection: "ltr",
+                letterSpacing: 8,
+              }}
+              onSubmitEditing={verifyCode}
+            />
+            <Button
+              secondary
+              disabled={busy || remaining > 0}
+              label={
+                remaining > 0
+                  ? "ارسال مجدد تا " +
+                    remaining.toLocaleString("fa-IR") +
+                    " ثانیه دیگر"
+                  : "ارسال مجدد کد"
+              }
+              onPress={sendCode}
+            />
+            <Button
+              secondary
+              disabled={busy}
+              label="ویرایش شماره موبایل"
+              onPress={() => {
+                setSentPhone("");
+                setCode("");
+                setError("");
+              }}
+            />
+          </>
         ) : (
-          <Pressable
-            onPress={async () => {
-              if (!supabase) {
-                notify("بازیابی رمز پس از اتصال سرویس فعال می‌شود.");
-                return;
-              }
-              if (!process.env.EXPO_PUBLIC_AUTH_REDIRECT_URL) {
-                notify("پیوند بازیابی رمز هنوز توسط مدیر تنظیم نشده است.");
-                return;
-              }
-              if (!email.includes("@")) {
-                notify("ابتدا ایمیل حساب خود را وارد کنید.");
-                return;
-              }
-              const { error: e } = await supabase.auth.resetPasswordForEmail(
-                email.trim(),
-                { redirectTo: process.env.EXPO_PUBLIC_AUTH_REDIRECT_URL },
-              );
-              notify(
-                e
-                  ? "ارسال پیوند ناموفق بود."
-                  : "در صورت وجود حساب، ایمیل بازیابی ارسال می‌شود.",
-              );
-            }}
-          >
-            <T size={13}>رمز عبور را فراموش کرده‌اید؟</T>
-          </Pressable>
+          <>
+            <T size={14}>شماره موبایل</T>
+            <Field
+              key="phone"
+              value={phone}
+              onChangeText={setPhone}
+              placeholder="09123456789"
+              keyboardType="phone-pad"
+              autoComplete="tel"
+              accessibilityLabel="شماره موبایل"
+              editable={!busy}
+              maxLength={24}
+              style={{ textAlign: "left", writingDirection: "ltr" }}
+              onSubmitEditing={sendCode}
+            />
+            {signup && (
+              <Pressable
+                disabled={busy}
+                accessibilityRole="checkbox"
+                accessibilityState={{ checked: consent, disabled: busy }}
+                onPress={() => setConsent(!consent)}
+              >
+                <T size={14}>
+                  {consent ? "☑" : "☐"} می‌دانم آثارم برای اعضای گروه و درمانگر
+                  قابل مشاهده است. این ثبت‌نام جایگزین رضایت‌نامهٔ پژوهش نیست.
+                </T>
+              </Pressable>
+            )}
+          </>
         )}
         {error ? (
-          <T size={14} style={{ color: "#B34032" }}>
-            {error}
-          </T>
+          <View accessibilityRole="alert" accessibilityLiveRegion="polite">
+            <T size={14} style={{ color: "#B34032" }}>
+              {error}
+            </T>
+          </View>
         ) : null}
         <Button
-          label={busy ? "لطفاً کمی صبر کنید…" : signup ? "ثبت‌نام" : "ورود"}
-          disabled={busy}
-          onPress={submit}
+          label={
+            busy
+              ? "لطفاً کمی صبر کنید…"
+              : sentPhone
+                ? "تأیید و ورود"
+                : remaining > 0
+                  ? "دریافت کد تا " +
+                    remaining.toLocaleString("fa-IR") +
+                    " ثانیه دیگر"
+                  : "دریافت کد تأیید"
+          }
+          disabled={busy || (!sentPhone && remaining > 0)}
+          onPress={sentPhone ? verifyCode : sendCode}
+        />
+        <Button
+          secondary
+          label="نصب برنامه روی گوشی"
+          onPress={() => router.push("/install")}
         />
         <T center muted size={13}>
           یا
         </T>
         <Button
           secondary
+          disabled={busy}
           label={signup ? "حساب دارم؛ ورود" : "ثبت‌نام جدید"}
           onPress={() => {
             setSignup(!signup);
+            setSentPhone("");
+            setCode("");
             setError("");
           }}
         />
@@ -275,6 +354,7 @@ export function Login() {
           <Button
             label="ورود به نسخهٔ آزمایشی"
             secondary
+            disabled={busy}
             onPress={() => {
               enterDemo();
               router.replace("/home");

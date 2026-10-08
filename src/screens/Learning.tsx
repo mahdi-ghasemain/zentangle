@@ -32,7 +32,7 @@ export function Home() {
       back={false}
     >
       <Row>
-        <Avatar sample={demo} size={61} />
+        <Avatar uri={data.avatar} sample={demo} size={61} />
         <View style={{ flex: 1 }}>
           <T bold size={width < 500 ? 20 : 23}>
             سلام {data.name}

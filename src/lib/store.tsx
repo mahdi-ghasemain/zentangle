@@ -40,8 +40,10 @@ export type Meeting = {
   after: number;
   starts: string;
   url: string;
+  provider?: "external" | "livekit";
 };
 type Data = {
+  avatar?: string;
   completed: number[];
   artworks: Artwork[];
   comments: Comment[];
@@ -272,12 +274,16 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
         };
       }),
     );
+    const avatar = await supabase.storage
+      .from("avatars")
+      .createSignedUrl(userId + "/profile.jpg", 3600);
     if (generation !== authGeneration.current) return;
     setRole(profile.data.role);
     setGroupId(profile.data.group_id);
     setData((d) => ({
       ...d,
       name: profile.data.display_name,
+      avatar: avatar.data?.signedUrl,
       completed: (progress.data ?? []).map((p) => p.lesson_id),
       artworks: artworkRows,
       comments: (feedback.data ?? []).map((c) => ({
@@ -294,6 +300,7 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
         after: m.after_lesson,
         starts: m.starts_at,
         url: m.url,
+        provider: m.provider,
       })),
     );
     setVideos(

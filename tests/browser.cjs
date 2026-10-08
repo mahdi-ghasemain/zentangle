@@ -2,6 +2,7 @@ const { chromium } = require("@playwright/test");
 const assert = require("node:assert/strict");
 const fs = require("node:fs");
 const path = require("node:path");
+const base = process.env.TEST_BASE_URL || "http://127.0.0.1:8081";
 (async () => {
   const browser = await chromium.launch({ channel: "msedge", headless: true });
   const page = await browser.newPage({
@@ -10,7 +11,7 @@ const path = require("node:path");
   const errors = [];
   page.on("pageerror", (e) => errors.push(e.message));
   fs.mkdirSync(path.join(__dirname, "../screenshots"), { recursive: true });
-  await page.goto("http://127.0.0.1:8081");
+  await page.goto(base);
   await page.getByText("هنر زندگی", { exact: true }).waitFor();
   await page.screenshot({ path: "screenshots/01-welcome-desktop.png" });
   await page.getByRole("button", { name: "ادامه", exact: true }).click();
@@ -21,9 +22,9 @@ const path = require("node:path");
     .click();
   await page.getByText("سلام خانم احمدی", { exact: true }).waitFor();
   await page.screenshot({ path: "screenshots/02-home-desktop.png" });
-  await page.goto("http://127.0.0.1:8081/lesson?id=5");
+  await page.goto(base + "/lesson?id=5");
   await page.getByText("جلسه در دسترس نیست", { exact: true }).waitFor();
-  await page.goto("http://127.0.0.1:8081/guide?id=3");
+  await page.goto(base + "/guide?id=3");
   for (let i = 0; i < 4; i++)
     await page.getByRole("button", { name: "مرحلهٔ بعد", exact: true }).click();
   await page
@@ -57,14 +58,14 @@ const path = require("node:path");
   await page.getByText("از کشیدن این نقش لذت بردم.", { exact: true }).waitFor();
   await page.reload();
   await page.getByText("از کشیدن این نقش لذت بردم.", { exact: true }).waitFor();
-  await page.goto("http://127.0.0.1:8081/lesson?id=4");
+  await page.goto(base + "/lesson?id=4");
   await page.getByText("ارائه و بازخورد گروهی", { exact: true }).waitFor();
-  await page.goto("http://127.0.0.1:8081/gallery");
+  await page.goto(base + "/gallery");
   await page.getByText("اثر آزمون من", { exact: true }).waitFor();
   await page.evaluate(() => document.fonts.ready);
   await page.screenshot({ path: "screenshots/03-gallery-desktop.png" });
   await page.setViewportSize({ width: 390, height: 844 });
-  await page.goto("http://127.0.0.1:8081/home");
+  await page.goto(base + "/home");
   await page.getByText("سلام خانم احمدی", { exact: true }).waitFor();
   await page.screenshot({ path: "screenshots/04-home-mobile.png" });
   for (const route of [
@@ -77,7 +78,7 @@ const path = require("node:path");
     "notifications",
     "admin",
   ]) {
-    await page.goto(`http://127.0.0.1:8081/${route}`);
+    await page.goto(`${base}/${route}`);
     await page.waitForTimeout(250);
     assert.equal(
       await page
@@ -87,7 +88,7 @@ const path = require("node:path");
       `no horizontal overflow: ${route}`,
     );
   }
-  await page.goto("http://127.0.0.1:8081/settings");
+  await page.goto(base + "/settings");
   await page.getByRole("button", { name: "خیلی درشت", exact: true }).click();
   await page.getByRole("button", { name: "☾ تاریک", exact: true }).click();
   await page.reload();

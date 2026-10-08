@@ -48,3 +48,6 @@ playwright-report/
 test-results/
 
 .vercel/
+
+supabase/.temp/
+.freebuff/

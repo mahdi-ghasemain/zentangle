@@ -1,16 +1,29 @@
 const fs = require("node:fs");
 const { chromium } = require("@playwright/test");
-const svg = `<svg xmlns="http://www.w3.org/2000/svg" width="1024" height="1024" viewBox="0 0 1024 1024"><rect width="1024" height="1024" fill="#246D52"/><circle cx="512" cy="512" r="380" fill="none" stroke="#C9D7BA" stroke-width="3" opacity=".45"/><g transform="translate(212 227) scale(6)" fill="none" stroke="#F9F1DD" stroke-width="2.1" stroke-linecap="round" stroke-linejoin="round"><path d="M50 70C24 52 38 24 50 9C64 28 75 52 50 70Z"/><path d="M50 70C24 70 15 49 13 32C35 34 49 46 50 70ZM50 70C76 70 85 49 87 32C65 34 51 46 50 70Z"/><path d="M50 73C25 83 9 66 5 52C24 50 39 56 50 73ZM50 73C75 83 91 66 95 52C76 50 61 56 50 73ZM34 83Q50 89 66 83"/></g></svg>`;
+const svg = fs.readFileSync("assets/brand.svg", "utf8");
 (async () => {
-  fs.writeFileSync("assets/brand.svg", svg);
+  fs.mkdirSync("public/icons", { recursive: true });
   const browser = await chromium.launch({ channel: "msedge", headless: true });
-  const page = await browser.newPage({
-    viewport: { width: 1024, height: 1024 },
-  });
-  await page.setContent(`<style>body{margin:0}</style>${svg}`);
-  await page.screenshot({ path: "assets/icon.png" });
-  await browser.close();
+  try {
+    const page = await browser.newPage();
+    for (const [size, file] of [
+      [1024, "assets/icon.png"],
+      [512, "public/icons/icon-512.png"],
+      [512, "public/icons/maskable-512.png"],
+      [192, "public/icons/icon-192.png"],
+      [180, "public/icons/apple-touch-icon.png"],
+    ]) {
+      await page.setViewportSize({ width: size, height: size });
+      await page.setContent(
+        "<style>html,body{margin:0;width:100%;height:100%;overflow:hidden}svg{width:100%;height:100%}</style>" +
+          svg,
+      );
+      await page.screenshot({ path: file });
+    }
+  } finally {
+    await browser.close();
+  }
 })().catch((e) => {
   console.error(e);
-  process.exit(1);
+  process.exitCode = 1;
 });

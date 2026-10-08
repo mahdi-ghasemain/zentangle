@@ -1,0 +1,6 @@
+[functions.send-sms]
+verify_jwt = false
+
+[functions.livekit-token]
+# JWT is verified with Auth.getUser inside the handler (supports current signing keys).
+verify_jwt = false

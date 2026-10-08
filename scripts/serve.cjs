@@ -34,6 +34,8 @@ http
       .on("error", () => res.writeHead(500).end())
       .pipe(res);
   })
-  .listen(8081, "127.0.0.1", () =>
-    console.log("Zentangle preview: http://localhost:8081"),
+  .listen(Number(process.env.PORT || 8081), "127.0.0.1", () =>
+    console.log(
+      "Zentangle preview: http://localhost:" + (process.env.PORT || 8081),
+    ),
   );

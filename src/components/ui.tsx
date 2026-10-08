@@ -245,16 +245,18 @@ export function Chip({
   );
 }
 export function Avatar({
+  uri,
   size = 50,
   sample = false,
 }: {
   size?: number;
   sample?: boolean;
+  uri?: string;
 }) {
   const c = useColors();
-  return sample ? (
+  return uri || sample ? (
     <Image
-      source={require("../../assets/hero.png")}
+      source={uri ? { uri } : require("../../assets/hero.png")}
       style={{
         width: size,
         height: size,

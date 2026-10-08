@@ -17,6 +17,7 @@ export function Admin() {
   const [after, setAfter] = useState(2);
   const [date, setDate] = useState("");
   const [url, setUrl] = useState("");
+  const [provider, setProvider] = useState<"livekit" | "external">("livekit");
   const [busy, setBusy] = useState(false);
   useEffect(() => {
     if (demo || role !== "therapist" || !supabase) return;
@@ -87,7 +88,7 @@ export function Admin() {
       return;
     }
     if (
-      !/^https:\/\//.test(url) ||
+      (provider === "external" && !/^https:\/\//.test(url)) ||
       !/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}$/.test(date) ||
       Number.isNaN(Date.parse(`${date}:00+03:30`))
     ) {
@@ -96,17 +97,16 @@ export function Admin() {
     }
     setBusy(true);
     try {
-      const { error } = await supabase!
-        .from("meetings")
-        .upsert(
-          {
-            group_id: groupId,
-            after_lesson: after,
-            starts_at: new Date(`${date}:00+03:30`).toISOString(),
-            url,
-          },
-          { onConflict: "group_id,after_lesson" },
-        );
+      const { error } = await supabase!.from("meetings").upsert(
+        {
+          group_id: groupId,
+          after_lesson: after,
+          starts_at: new Date(`${date}:00+03:30`).toISOString(),
+          url: provider === "external" ? url : null,
+          provider,
+        },
+        { onConflict: "group_id,after_lesson" },
+      );
       if (error) throw error;
       await refresh();
       notify("زمان جلسه ثبت شد.");
@@ -243,14 +243,30 @@ export function Admin() {
           <T muted size={12}>
             نمونه: 2026-10-10T16:00 — ساعت ۱۶ به وقت تهران
           </T>
-          <T>پیوند ورود به سرویس جلسه</T>
-          <Field
-            value={url}
-            onChangeText={setUrl}
-            placeholder="https://…"
-            autoCapitalize="none"
-            accessibilityLabel="پیوند جلسه"
-          />
+          <Row>
+            <Chip
+              label="تماس داخل برنامه"
+              selected={provider === "livekit"}
+              onPress={() => setProvider("livekit")}
+            />
+            <Chip
+              label="پیوند سرویس دیگر"
+              selected={provider === "external"}
+              onPress={() => setProvider("external")}
+            />
+          </Row>
+          {provider === "external" && (
+            <>
+              <T>پیوند ورود به سرویس جلسه</T>
+              <Field
+                value={url}
+                onChangeText={setUrl}
+                placeholder="https://…"
+                autoCapitalize="none"
+                accessibilityLabel="پیوند جلسه"
+              />
+            </>
+          )}
           <Button
             label="ذخیرهٔ برنامهٔ جلسه"
             disabled={busy}
