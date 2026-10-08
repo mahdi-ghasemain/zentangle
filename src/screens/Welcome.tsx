@@ -324,14 +324,6 @@ export function Login() {
         />
         <Button
           secondary
-          label="نصب برنامه روی گوشی"
-          onPress={() => router.push("/install")}
-        />
-        <T center muted size={13}>
-          یا
-        </T>
-        <Button
-          secondary
           disabled={busy}
           label={signup ? "حساب دارم؛ ورود" : "ثبت‌نام جدید"}
           onPress={() => {
