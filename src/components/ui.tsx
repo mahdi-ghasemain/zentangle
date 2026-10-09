@@ -293,12 +293,16 @@ export function Shell({
   children,
   back = true,
   noNav = false,
+  centered = false,
+  scrollable = true,
 }: {
   title: string;
   subtitle?: string;
   children: React.ReactNode;
   back?: boolean;
   noNav?: boolean;
+  centered?: boolean;
+  scrollable?: boolean;
 }) {
   const { width } = useWindowDimensions();
   const wide = width >= 1000;
@@ -373,6 +377,7 @@ export function Shell({
         <View style={{ flex: 1 }}>
           <View
             style={{
+              display: !title && !back && noNav ? "none" : "flex",
               paddingHorizontal: wide ? 38 : 22,
               paddingVertical: 16,
               borderBottomWidth: wide ? 1 : 0,
@@ -416,11 +421,15 @@ export function Shell({
             </Row>
           </View>
           <ScrollView
+            scrollEnabled={scrollable}
+            bounces={scrollable}
             keyboardShouldPersistTaps="handled"
             contentContainerStyle={{
               padding: wide ? 32 : 20,
               paddingTop: 12,
-              paddingBottom: 36,
+              paddingBottom: centered ? 20 : 36,
+              flexGrow: centered ? 1 : undefined,
+              justifyContent: centered ? "center" : undefined,
               width: "100%",
               maxWidth: noNav ? 600 : 1120,
               alignSelf: "center",

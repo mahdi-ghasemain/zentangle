@@ -1,11 +1,10 @@
 import React, { useEffect, useRef, useState } from "react";
-import { View, Image, Pressable, useWindowDimensions } from "react-native";
+import { View, Image, Pressable, Keyboard, useWindowDimensions } from "react-native";
 import { router } from "expo-router";
-import { LinearGradient } from "expo-linear-gradient";
 import { T, Button, Field, Row, Shell, useColors } from "../components/ui";
 import { Lotus, LeafArt, Botanical } from "../components/Art";
 import { useStore } from "../lib/store";
-import { supabase, isConfigured } from "../lib/supabase";
+import { supabase } from "../lib/supabase";
 import { latinDigits, normalizeIranPhone, phoneAuthError } from "../lib/phone";
 
 export function Welcome() {
@@ -114,6 +113,7 @@ export function Login() {
   const [signup, setSignup] = useState(false);
   const [phone, setPhone] = useState("");
   const [sentPhone, setSentPhone] = useState("");
+  const [deliverySucceeded, setDeliverySucceeded] = useState(false);
   const [code, setCode] = useState("");
   const [name, setName] = useState("");
   const [busy, setBusy] = useState(false);
@@ -122,7 +122,14 @@ export function Login() {
   const [retryAt, setRetryAt] = useState(0);
   const [remaining, setRemaining] = useState(0);
   const inFlight = useRef(false);
-  const { enterDemo } = useStore();
+  const { data } = useStore();
+  const { height } = useWindowDimensions();
+  const [keyboardOpen, setKeyboardOpen] = useState(false);
+  useEffect(() => {
+    const shown = Keyboard.addListener("keyboardDidShow", () => setKeyboardOpen(true));
+    const hidden = Keyboard.addListener("keyboardDidHide", () => setKeyboardOpen(false));
+    return () => { shown.remove(); hidden.remove(); };
+  }, []);
   useEffect(() => {
     const tick = () =>
       setRemaining(Math.max(0, Math.ceil((retryAt - Date.now()) / 1000)));
@@ -144,10 +151,13 @@ export function Login() {
     }
     if (!supabase) {
       setError(
-        "ورود پیامکی هنوز فعال نشده است. می‌توانید نسخهٔ آزمایشی را ببینید.",
+        "اتصال ورود در این نسخه تنظیم نشده است؛ لطفاً نسخهٔ به‌روز برنامه را نصب کنید.",
       );
       return;
     }
+    setSentPhone(normalized);
+    setDeliverySucceeded(false);
+    setCode("");
     inFlight.current = true;
     setBusy(true);
     try {
@@ -159,7 +169,7 @@ export function Login() {
         },
       });
       if (authError) throw authError;
-      setSentPhone(normalized);
+      setDeliverySucceeded(true);
       setCode("");
       setRetryAt(Date.now() + 60000);
     } catch (e) {
@@ -170,7 +180,7 @@ export function Login() {
     }
   };
   const verifyCode = async () => {
-    if (inFlight.current || !supabase || !sentPhone) return;
+    if (inFlight.current || !supabase || !sentPhone || !deliverySucceeded) return;
     setError("");
     const token = latinDigits(code).trim();
     if (!/^\d{6}$/.test(token)) {
@@ -196,9 +206,9 @@ export function Login() {
     }
   };
   return (
-    <Shell title="" noNav>
-      <View style={{ alignItems: "center", gap: 7, marginBottom: 20 }}>
-        <Lotus size={68} />
+    <Shell title="" noNav back={false} centered scrollable={keyboardOpen || height < 640 || data.settings.font > 1}>
+      <View style={{ alignItems: "center", gap: 5, marginBottom: 8 }}>
+        <Lotus size={signup || height < 740 ? 44 : 68} />
         <T bold size={29}>
           {sentPhone
             ? "کد تأیید را وارد کنید"
@@ -208,11 +218,13 @@ export function Login() {
         </T>
         <T muted center>
           {sentPhone
-            ? "کد تأیید به " + "0" + sentPhone.slice(3) + " ارسال شد."
+            ? deliverySucceeded
+              ? "کد تأیید به " + "0" + sentPhone.slice(3) + " ارسال شد."
+              : busy ? "در حال درخواست ارسال کد…" : "ارسال کد کامل نشد؛ پیام زیر را بررسی کنید و دوباره ارسال کنید."
             : "با شماره موبایل و کد پیامکی وارد شوید."}
         </T>
       </View>
-      <View style={{ gap: 14 }}>
+      <View style={{ gap: signup ? 8 : 12 }}>
         {signup && !sentPhone && (
           <>
             <T size={14}>نام و نام خانوادگی</T>
@@ -319,7 +331,7 @@ export function Login() {
                     " ثانیه دیگر"
                   : "دریافت کد تأیید"
           }
-          disabled={busy || (!sentPhone && remaining > 0)}
+          disabled={busy || (sentPhone ? !deliverySucceeded : remaining > 0)}
           onPress={sentPhone ? verifyCode : sendCode}
         />
         <Button
@@ -333,31 +345,6 @@ export function Login() {
             setError("");
           }}
         />
-        <LinearGradient
-          colors={["#E2E7D8", "#F2E8D6"]}
-          style={{ padding: 18, borderRadius: 20, gap: 10 }}
-        >
-          <T center bold>
-            ابتدا با هنر زندگی آشنا شوید
-          </T>
-          <T size={13} center style={{ color: "#526347" }}>
-            بدون حساب، صفحات و امکانات را با داده‌های نمونه تجربه کنید.
-          </T>
-          <Button
-            label="ورود به نسخهٔ آزمایشی"
-            secondary
-            disabled={busy}
-            onPress={() => {
-              enterDemo();
-              router.replace("/home");
-            }}
-          />
-        </LinearGradient>
-        {!isConfigured && (
-          <T size={12} muted center>
-            حساب واقعی هنوز به سرویس متصل نشده است.
-          </T>
-        )}
       </View>
     </Shell>
   );

@@ -57,7 +57,8 @@
     "preview": "node scripts/serve.cjs",
     "test:browser": "node tests/browser.cjs",
     "test:database": "npx --yes --package=deno deno test --node-modules-dir=none --allow-read --allow-env tests/database.test.ts",
-    "check:backend": "npx --yes --package=deno deno check --node-modules-dir=none supabase/functions/livekit-token/index.ts supabase/functions/send-sms/index.ts"
+    "check:backend": "npx --yes --package=deno deno check --node-modules-dir=none supabase/functions/livekit-token/index.ts supabase/functions/send-sms/index.ts",
+    "eas-build-post-install": "node scripts/check-auth-env.cjs"
   },
   "private": true,
   "engines": {

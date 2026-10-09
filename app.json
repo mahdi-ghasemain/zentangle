@@ -20,7 +20,7 @@
       "expo-asset"
     ],
     "slug": "zentangle",
-    "version": "1.0.0",
+    "version": "1.0.1",
     "name": "هنر زندگی",
     "icon": "./assets/icon.png",
     "orientation": "portrait",
@@ -40,7 +40,21 @@
         "backgroundColor": "#F8F3E9",
         "foregroundImage": "./assets/icon.png"
       },
-      "package": "app.honarezendegi.zentangle"
-    }
+      "package": "app.honarezendegi.zentangle",
+      "permissions": [
+        "android.permission.RECORD_AUDIO",
+        "android.permission.MODIFY_AUDIO_SETTINGS",
+        "android.permission.FOREGROUND_SERVICE",
+        "android.permission.FOREGROUND_SERVICE_MEDIA_PLAYBACK"
+      ],
+      "versionCode": 2
+    },
+    "extra": {
+      "router": {},
+      "eas": {
+        "projectId": "67af814d-2e69-44c4-a12b-c56448782368"
+      }
+    },
+    "owner": "mahdi_ghasemian"
   }
 }

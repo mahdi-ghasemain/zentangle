@@ -5,6 +5,7 @@ export function createSmsHandler({
   verify,
   authorize,
   fetcher = fetch,
+  report = (event) => console.error(JSON.stringify(event)),
 }) {
   const fail = (status, message) =>
     Response.json({ error: { http_code: status, message } }, { status });
@@ -48,13 +49,26 @@ export function createSmsHandler({
           signal: AbortSignal.timeout(4000),
         },
       );
-      if (!response.ok) return fail(502, "SMS delivery failed");
-      const result = await response.json();
-      if (result?.Success !== true && result?.success !== true)
+      if (!response.ok) {
+        report({ event: "sms_provider_http_error", status: response.status });
         return fail(502, "SMS delivery failed");
+      }
+      let result;
+      try { result = await response.json(); }
+      catch {
+        report({ event: "sms_provider_invalid_json" });
+        return fail(502, "SMS delivery failed");
+      }
+      if (result?.Success !== true && result?.success !== true) {
+        const rawCode = result?.Code ?? result?.code ?? result?.StatusCode ?? result?.statusCode;
+        const providerCode = typeof rawCode === "number" && Number.isFinite(rawCode) && Math.abs(rawCode) < 10000 ? rawCode : null;
+        report({ event: "sms_provider_rejected", providerCode });
+        return fail(502, "SMS delivery failed");
+      }
       return Response.json({});
-    } catch {
-      // Do not log the phone, OTP, credentials, or provider response.
+    } catch (error) {
+      report({ event: error?.name === "TimeoutError" || error?.name === "AbortError" ? "sms_provider_timeout" : "sms_provider_connection_error" });
+      // Never log the phone, OTP, credentials, raw exception or provider response.
       return fail(502, "SMS delivery failed");
     }
   };

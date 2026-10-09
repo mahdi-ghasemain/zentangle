@@ -101,3 +101,11 @@ test("exhausted or unavailable SMS budget never contacts the provider", async ()
     assert.equal(sent, false);
   }
 });
+
+test("diagnostics never expose provider messages, credentials, phone or OTP", async () => {
+  const events = [];
+  const handler = createSmsHandler({ ...config, report: e => events.push(e),
+    fetcher: async () => Response.json({ Success: false, Code: 17, Message: "test-key +989123456789 123456" }) });
+  assert.equal((await handler(request())).status, 502);
+  assert.deepEqual(events, [{ event: "sms_provider_rejected", providerCode: 17 }]);
+});
