@@ -85,3 +85,9 @@ npm test
 
 راهنمای انتشار در Vercel در [DEPLOYMENT.md](./DEPLOYMENT.md) قرار دارد. برای مشاهدهٔ نسخهٔ آزمایشی نیازی به تنظیم سرور یا ساخت حساب نیست.
 
+## دانلود
+
+- اندروید (APK پیش‌نمایش، حالت آزمایشی): https://expo.dev/artifacts/eas/T4QYeWCCIyDnC8R_lSl1UQeBbIG0T8Ey7gRFkMCpPJM.apk
+- صفحهٔ بیلدها: https://expo.dev/accounts/mahdi_ghasemian/projects/zentangle/builds
+- آیفون: فعلاً از نسخهٔ وب (Vercel) با Safari و «Add to Home Screen» استفاده کنید؛ بیلد TestFlight نیازمند حساب Apple Developer است.
+
