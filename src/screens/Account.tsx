@@ -277,7 +277,7 @@ export function Calendar() {
     const events = meetings
       .map(
         (m) =>
-          `BEGIN:VEVENT\r\nUID:${m.id}@zentangle\r\nDTSTAMP:${stamp(new Date().toISOString())}\r\nDTSTART:${stamp(m.starts)}\r\nDURATION:PT1H\r\nSUMMARY:جلسه گروهی هنر زندگی\r\nURL:${m.url.replace(/[\r\n]/g, "")}\r\nEND:VEVENT`,
+          `BEGIN:VEVENT\r\nUID:${m.id}@zentangle\r\nDTSTAMP:${stamp(new Date().toISOString())}\r\nDTSTART:${stamp(m.starts)}\r\nDURATION:PT1H\r\nSUMMARY:جلسه گروهی هنر زندگی\r\nURL:${(m.url ?? "").replace(/[\r\n]/g, "")}\r\nEND:VEVENT`,
       )
       .join("\r\n");
     try {

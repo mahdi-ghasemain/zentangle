@@ -30,6 +30,14 @@ Deno.test(
           ),
         ),
       );
+      await db.exec(
+        await Deno.readTextFile(
+          new URL(
+            "../supabase/migrations/003_account_preferences.sql",
+            import.meta.url,
+          ),
+        ),
+      );
       const a = "11111111-1111-4111-8111-111111111111";
       const b = "22222222-2222-4222-8222-222222222222";
       const group = "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa";
@@ -53,6 +61,22 @@ Deno.test(
       await assert.rejects(() =>
         db.exec(
           `insert into storage.objects(bucket_id,name) values ('avatars','${a}/extra.jpg')`,
+        ),
+      );
+      await db.exec(
+        `insert into public.account_settings(user_id,dark) values ('${a}',true)`,
+      );
+      await assert.rejects(() =>
+        db.exec(`insert into public.account_settings(user_id) values ('${b}')`),
+      );
+      const ownSettings = await db.query<{ dark: boolean }>(
+        "select dark from public.account_settings",
+      );
+      assert.equal(ownSettings.rows.length, 1);
+      assert.equal(ownSettings.rows[0].dark, true);
+      await assert.rejects(() =>
+        db.exec(
+          `insert into public.account_settings(user_id,font) values ('${a}',999) on conflict(user_id) do update set font=999`,
         ),
       );
       await db.exec(

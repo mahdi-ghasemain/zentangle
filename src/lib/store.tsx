@@ -166,6 +166,8 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
   const [videos, setVideos] = useState<Record<number, string>>({});
   const authGeneration = useRef(0);
   const [notice, setNotice] = useState("");
+  const settingsQueue = useRef<Promise<void>>(Promise.resolve());
+  const pendingLikes = useRef(new Set<string>());
   const timer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const notify = (s: string) => {
     setNotice(s);
@@ -182,10 +184,10 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
           const cached = JSON.parse(value);
           setData((d) => ({
             ...d,
-            ...cached,
+            onboarded: cached.onboarded === true,
             settings: { ...d.settings, ...cached.settings },
           }));
-          setDemo(cached.demoActive === true);
+          setDemo(false); // Production sessions never resume a cached preview.
         }
         if (supabase) {
           const { data: auth } = await supabase.auth.getSession();
@@ -226,63 +228,91 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
   const refresh = async () => {
     if (!supabase || !userId || demo) return;
     const generation = authGeneration.current;
-    const [profile, progress, arts, feedback, schedules, content] =
-      await Promise.all([
-        supabase.from("profiles").select("*").eq("id", userId).single(),
-        supabase.from("progress").select("lesson_id").eq("user_id", userId),
-        supabase
-          .from("artworks")
-          .select("*, profiles(display_name)")
-          .order("created_at", { ascending: false }),
-        supabase
-          .from("comments")
-          .select("*, profiles(display_name)")
-          .order("created_at"),
-        supabase.from("meetings").select("*").order("starts_at"),
-        supabase.from("lesson_content").select("*"),
-      ]);
-    for (const r of [profile, progress, arts, feedback, schedules, content])
+    const [
+      profile,
+      progress,
+      arts,
+      feedback,
+      schedules,
+      content,
+      preferences,
+      favorites,
+    ] = await Promise.all([
+      supabase.from("profiles").select("*").eq("id", userId).single(),
+      supabase.from("progress").select("lesson_id").eq("user_id", userId),
+      supabase
+        .from("artworks")
+        .select("*, profiles(display_name)")
+        .order("created_at", { ascending: false }),
+      supabase
+        .from("comments")
+        .select("*, profiles(display_name)")
+        .order("created_at"),
+      supabase.from("meetings").select("*").order("starts_at"),
+      supabase.from("lesson_content").select("*"),
+      supabase
+        .from("account_settings")
+        .select("font,dark,notifications,autoplay")
+        .eq("user_id", userId)
+        .maybeSingle(),
+      supabase.from("artwork_likes").select("artwork_id").eq("user_id", userId),
+    ]);
+    for (const r of [
+      profile,
+      progress,
+      arts,
+      feedback,
+      schedules,
+      content,
+      preferences,
+      favorites,
+    ])
       if (r.error) throw r.error;
 
-    const artworkRows: Artwork[] = await Promise.all(
-      (arts.data ?? []).map(async (a) => {
-        const image = a.image_path
-          ? (
-              await supabase!.storage
-                .from("artworks")
-                .createSignedUrl(a.image_path, 3600)
-            ).data?.signedUrl
-          : undefined;
-        const audio = a.audio_path
-          ? (
-              await supabase!.storage
-                .from("artworks")
-                .createSignedUrl(a.audio_path, 3600)
-            ).data?.signedUrl
-          : undefined;
-        return {
-          id: a.id,
-          owner: a.user_id,
-          name: a.profiles?.display_name ?? "هنرمند",
-          title: a.title,
-          story: a.story,
-          image,
-          audio,
-          lesson: a.lesson_id,
-          created: a.created_at,
-          variant: 0,
-        };
-      }),
+    const paths = [
+      ...new Set(
+        (arts.data ?? [])
+          .flatMap((a) => [a.image_path, a.audio_path])
+          .filter(Boolean),
+      ),
+    ] as string[];
+    const signed = paths.length
+      ? await supabase.storage.from("artworks").createSignedUrls(paths, 3600)
+      : { data: [], error: null };
+    if (signed.error) throw signed.error;
+    const urls = new Map(
+      (signed.data ?? []).map((item) => [item.path, item.signedUrl]),
     );
-    const avatar = await supabase.storage
+    const artworkRows: Artwork[] = (arts.data ?? []).map((a) => ({
+      id: a.id,
+      owner: a.user_id,
+      name: a.profiles?.display_name ?? "هنرمند",
+      title: a.title,
+      story: a.story,
+      image: urls.get(a.image_path) ?? undefined,
+      audio: urls.get(a.audio_path) ?? undefined,
+      lesson: a.lesson_id,
+      created: a.created_at,
+      variant: 0,
+    }));
+    const avatarFiles = await supabase.storage
       .from("avatars")
-      .createSignedUrl(userId + "/profile.jpg", 3600);
+      .list(userId, { limit: 1, search: "profile.jpg" });
+    const avatar = avatarFiles.data?.some((f) => f.name === "profile.jpg")
+      ? await supabase.storage
+          .from("avatars")
+          .createSignedUrl(userId + "/profile.jpg", 3600)
+      : { data: null };
     if (generation !== authGeneration.current) return;
     setRole(profile.data.role);
     setGroupId(profile.data.group_id);
     setData((d) => ({
       ...d,
       name: profile.data.display_name,
+      likes: (favorites.data ?? []).map((x) => x.artwork_id),
+      settings: preferences.data
+        ? { ...initial.settings, ...preferences.data }
+        : initial.settings,
       avatar: avatar.data?.signedUrl,
       completed: (progress.data ?? []).map((p) => p.lesson_id),
       artworks: artworkRows,
@@ -439,15 +469,62 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
             name: "خانم احمدی",
           }));
         },
-        updateSettings: (s) =>
-          setData((d) => ({ ...d, settings: { ...d.settings, ...s } })),
-        like: (id) =>
-          setData((d) => ({
-            ...d,
-            likes: d.likes.includes(id)
-              ? d.likes.filter((x) => x !== id)
-              : [...d.likes, id],
-          })),
+        updateSettings: (changes) => {
+          if (!supabase || !userId || demo) {
+            notify("برای ذخیره تنظیمات وارد حساب شوید.");
+            return;
+          }
+          settingsQueue.current = settingsQueue.current
+            .then(async () => {
+              const { error } = await supabase!
+                .from("account_settings")
+                .upsert(
+                  { user_id: userId, ...changes },
+                  { defaultToNull: false },
+                );
+              if (error) {
+                notify("تنظیمات ذخیره نشد؛ دوباره تلاش کنید.");
+                return;
+              }
+              setData((d) => ({
+                ...d,
+                settings: { ...d.settings, ...changes },
+              }));
+            })
+            .catch(() => notify("ذخیره تنظیمات ناموفق بود."));
+        },
+        like: (id) => {
+          if (!supabase || !userId || demo) {
+            notify("برای ذخیره علاقه‌مندی وارد حساب شوید.");
+            return;
+          }
+          if (pendingLikes.current.has(id)) return;
+          pendingLikes.current.add(id);
+          void (async () => {
+            const liked = data.likes.includes(id);
+            const result = liked
+              ? await supabase
+                  .from("artwork_likes")
+                  .delete()
+                  .eq("user_id", userId)
+                  .eq("artwork_id", id)
+              : await supabase
+                  .from("artwork_likes")
+                  .insert({ user_id: userId, artwork_id: id });
+            if (result.error && result.error.code !== "23505") {
+              notify("علاقه‌مندی ذخیره نشد؛ دوباره تلاش کنید.");
+              return;
+            }
+            setData((d) => ({
+              ...d,
+              likes: liked
+                ? d.likes.filter((x) => x !== id)
+                : [...new Set([...d.likes, id])],
+            }));
+          })()
+            .catch(() => notify("ذخیره علاقه‌مندی ناموفق بود."))
+            .finally(() => pendingLikes.current.delete(id));
+        },
         logout: async () => {
           if (supabase && userId) await supabase.auth.signOut();
           setDemo(false);
