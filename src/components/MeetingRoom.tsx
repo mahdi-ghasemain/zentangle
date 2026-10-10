@@ -73,9 +73,12 @@ export default function MeetingRoom({ meetingId }: { meetingId: string }) {
   const pending = useRef(false),
     mounted = useRef(true);
   useEffect(
-    () => () => {
-      mounted.current = false;
-      void AudioSession.stopAudioSession();
+    () => {
+      mounted.current = true;
+      return () => {
+        mounted.current = false;
+        void AudioSession.stopAudioSession();
+      };
     },
     [],
   );
