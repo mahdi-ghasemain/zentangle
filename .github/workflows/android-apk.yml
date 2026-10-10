@@ -22,6 +22,14 @@ jobs:
 
       - run: npm ci
 
+      - name: Check Supabase secrets
+        run: |
+          if [ -z "$EXPO_PUBLIC_SUPABASE_URL" ] || [ -z "$EXPO_PUBLIC_SUPABASE_ANON_KEY" ]; then
+            echo "::error::Supabase secrets are missing. Add EXPO_PUBLIC_SUPABASE_URL and EXPO_PUBLIC_SUPABASE_ANON_KEY in Settings > Secrets > Actions."
+            exit 1
+          fi
+          echo "Supabase secrets present."
+
       - name: Verify API configuration
         run: node scripts/check-auth-env.cjs
 
