@@ -154,7 +154,7 @@ export function Button({
       onPress={onPress}
       style={({ pressed }) => [
         {
-          minHeight: 52,
+          minHeight: small ? 44 : 52,
           paddingVertical: small ? 7 : 11,
           paddingHorizontal: 20,
           borderRadius: 17,
@@ -295,6 +295,7 @@ export function Shell({
   noNav = false,
   centered = false,
   scrollable = true,
+  compact = false,
 }: {
   title: string;
   subtitle?: string;
@@ -303,6 +304,7 @@ export function Shell({
   noNav?: boolean;
   centered?: boolean;
   scrollable?: boolean;
+  compact?: boolean;
 }) {
   const { width } = useWindowDimensions();
   const wide = width >= 1000;
@@ -425,15 +427,15 @@ export function Shell({
             bounces={scrollable}
             keyboardShouldPersistTaps="handled"
             contentContainerStyle={{
-              padding: wide ? 32 : 20,
-              paddingTop: 12,
-              paddingBottom: centered ? 20 : 36,
+              padding: compact ? 14 : wide ? 32 : 20,
+              paddingTop: compact ? 4 : 12,
+              paddingBottom: compact ? 8 : centered ? 20 : 36,
               flexGrow: centered ? 1 : undefined,
               justifyContent: centered ? "center" : undefined,
               width: "100%",
               maxWidth: noNav ? 600 : 1120,
               alignSelf: "center",
-              gap: 20,
+              gap: compact ? 8 : 20,
             }}
           >
             {demo && !noNav && (

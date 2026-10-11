@@ -1,4 +1,4 @@
-name: Android APK (preview)
+name: Android APK
 
 on:
   workflow_dispatch:
@@ -51,15 +51,15 @@ jobs:
 
       - uses: actions/upload-artifact@v4
         with:
-          name: zentangle-preview-apk
+          name: honarezendegi-android-apk
           path: android/app/build/outputs/apk/release/app-release.apk
           if-no-files-found: error
 
-      - run: cp android/app/build/outputs/apk/release/app-release.apk zentangle-preview.apk
+      - run: cp android/app/build/outputs/apk/release/app-release.apk honarezendegi-android-1.0.3.apk
 
       - uses: softprops/action-gh-release@v2
         with:
-          tag_name: preview
-          name: پیش‌نمایش اندروید
-          body: فایل نصب پیش‌نمایش هنر زندگی (به‌روزرسانی خودکار با هر بیلد موفق)
-          files: zentangle-preview.apk
+          tag_name: android-v1.0.3
+          name: هنر زندگی نسخهٔ ۱.۰.۳ برای اندروید
+          body: فایل نصب اندروید هنر زندگی نسخهٔ ۱.۰.۳.
+          files: honarezendegi-android-1.0.3.apk

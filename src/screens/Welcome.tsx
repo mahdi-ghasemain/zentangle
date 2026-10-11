@@ -128,9 +128,9 @@ export function Login() {
   const [retryAt, setRetryAt] = useState(0);
   const [remaining, setRemaining] = useState(0);
   const inFlight = useRef(false);
-  const { data } = useStore();
   const { height } = useWindowDimensions();
   const [keyboardOpen, setKeyboardOpen] = useState(false);
+  const compact = height < 740 || keyboardOpen;
   useEffect(() => {
     const shown = Keyboard.addListener("keyboardDidShow", () =>
       setKeyboardOpen(true),
@@ -225,33 +225,42 @@ export function Login() {
       noNav
       back={false}
       centered
-      scrollable={
-        keyboardOpen || height < 800 || signup || data.settings.font > 1
-      }
+      scrollable={false}
+      compact={compact}
     >
-      <View style={{ alignItems: "center", gap: 5, marginBottom: 8 }}>
-        <Lotus size={signup || height < 740 ? 44 : 68} />
-        <T bold size={29}>
+      <View
+        style={{
+          alignItems: "center",
+          gap: compact ? 2 : 5,
+          marginBottom: compact ? 0 : 8,
+        }}
+      >
+        {!keyboardOpen && <Lotus size={compact ? 36 : signup ? 44 : 68} />}
+        <T bold size={compact ? 23 : 29}>
           {sentPhone
             ? "کد تأیید را وارد کنید"
             : signup
               ? "به جمع ما خوش آمدید"
               : "ورود با شماره موبایل"}
         </T>
-        <T muted center>
-          {sentPhone
-            ? deliverySucceeded
-              ? "کد تأیید به " + "0" + sentPhone.slice(3) + " ارسال شد."
-              : busy
-                ? "در حال درخواست ارسال کد…"
-                : "ارسال کد کامل نشد؛ پیام زیر را بررسی کنید و دوباره ارسال کنید."
-            : "با شماره موبایل و کد پیامکی وارد شوید."}
-        </T>
+        {!keyboardOpen && (
+          <T muted center size={compact ? 13 : 16}>
+            {sentPhone
+              ? deliverySucceeded
+                ? "کد تأیید به " + "0" + sentPhone.slice(3) + " ارسال شد."
+                : busy
+                  ? "در حال درخواست ارسال کد…"
+                  : "ارسال کد کامل نشد؛ پیام زیر را بررسی کنید و دوباره ارسال کنید."
+              : "با شماره موبایل و کد پیامکی وارد شوید."}
+          </T>
+        )}
       </View>
-      <View style={{ gap: signup ? 8 : 12 }}>
+      <View style={{ gap: compact ? 6 : signup ? 8 : 12 }}>
         {signup && !sentPhone && (
           <>
-            <T size={14}>نام و نام خانوادگی</T>
+            {!keyboardOpen && (
+              <T size={compact ? 12 : 14}>نام و نام خانوادگی</T>
+            )}
             <Field
               value={name}
               onChangeText={setName}
@@ -259,12 +268,15 @@ export function Login() {
               maxLength={100}
               placeholder="نام شما"
               accessibilityLabel="نام و نام خانوادگی"
+              style={compact ? { minHeight: 46, padding: 10 } : undefined}
             />
           </>
         )}
         {sentPhone ? (
           <>
-            <T size={14}>کد تأیید ۶ رقمی</T>
+            {!keyboardOpen && (
+              <T size={compact ? 12 : 14}>کد تأیید ۶ رقمی</T>
+            )}
             <Field
               key="otp"
               value={code}
@@ -276,38 +288,42 @@ export function Login() {
               maxLength={6}
               editable={!busy}
               style={{
+                minHeight: compact ? 46 : undefined,
+                padding: compact ? 10 : undefined,
                 textAlign: "center",
                 writingDirection: "ltr",
                 letterSpacing: 8,
               }}
               onSubmitEditing={verifyCode}
             />
-            <Button
-              secondary
-              disabled={busy || remaining > 0}
-              label={
-                remaining > 0
-                  ? "ارسال مجدد تا " +
-                    remaining.toLocaleString("fa-IR") +
-                    " ثانیه دیگر"
-                  : "ارسال مجدد کد"
-              }
-              onPress={sendCode}
-            />
-            <Button
-              secondary
-              disabled={busy}
-              label="ویرایش شماره موبایل"
-              onPress={() => {
-                setSentPhone("");
-                setCode("");
-                setError("");
-              }}
-            />
+            {remaining === 0 && !keyboardOpen && (
+              <Button
+                small={compact}
+                secondary
+                disabled={busy}
+                label="ارسال مجدد کد"
+                onPress={sendCode}
+              />
+            )}
+            {!keyboardOpen && (
+              <Button
+                small={compact}
+                secondary
+                disabled={busy}
+                label="ویرایش شماره موبایل"
+                onPress={() => {
+                  setSentPhone("");
+                  setCode("");
+                  setError("");
+                }}
+              />
+            )}
           </>
         ) : (
           <>
-            <T size={14}>شماره موبایل</T>
+            {!keyboardOpen && (
+              <T size={compact ? 12 : 14}>شماره موبایل</T>
+            )}
             <Field
               key="phone"
               value={phone}
@@ -318,7 +334,12 @@ export function Login() {
               accessibilityLabel="شماره موبایل"
               editable={!busy}
               maxLength={24}
-              style={{ textAlign: "left", writingDirection: "ltr" }}
+              style={{
+                minHeight: compact ? 46 : undefined,
+                padding: compact ? 10 : undefined,
+                textAlign: "left",
+                writingDirection: "ltr",
+              }}
               onSubmitEditing={sendCode}
             />
             {signup && (
@@ -328,7 +349,7 @@ export function Login() {
                 accessibilityState={{ checked: consent, disabled: busy }}
                 onPress={() => setConsent(!consent)}
               >
-                <T size={14}>
+                <T size={compact ? 12 : 14}>
                   {consent ? "☑" : "☐"} می‌دانم آثارم برای اعضای گروه و درمانگر
                   قابل مشاهده است. این ثبت‌نام جایگزین رضایت‌نامهٔ پژوهش نیست.
                 </T>
@@ -338,12 +359,13 @@ export function Login() {
         )}
         {error ? (
           <View accessibilityRole="alert" accessibilityLiveRegion="polite">
-            <T size={14} style={{ color: "#B34032" }}>
+            <T size={compact ? 12 : 14} style={{ color: "#B34032" }}>
               {error}
             </T>
           </View>
         ) : null}
         <Button
+          small={compact}
           label={
             busy
               ? "لطفاً کمی صبر کنید…"
@@ -358,17 +380,20 @@ export function Login() {
           disabled={busy || (sentPhone ? !deliverySucceeded : remaining > 0)}
           onPress={sentPhone ? verifyCode : sendCode}
         />
-        <Button
-          secondary
-          disabled={busy}
-          label={signup ? "حساب دارم؛ ورود" : "ثبت‌نام جدید"}
-          onPress={() => {
-            setSignup(!signup);
-            setSentPhone("");
-            setCode("");
-            setError("");
-          }}
-        />
+        {!keyboardOpen && (
+          <Button
+            small={compact}
+            secondary
+            disabled={busy}
+            label={signup ? "حساب دارم؛ ورود" : "ثبت‌نام جدید"}
+            onPress={() => {
+              setSignup(!signup);
+              setSentPhone("");
+              setCode("");
+              setError("");
+            }}
+          />
+        )}
       </View>
     </Shell>
   );
