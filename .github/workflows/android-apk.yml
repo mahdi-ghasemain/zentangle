@@ -40,7 +40,7 @@ jobs:
 
       - uses: android-actions/setup-android@v4
         with:
-          packages: 'platform-tools'
+          packages: "platform-tools"
 
       - run: npx expo prebuild --platform android --non-interactive --clean
 
@@ -52,10 +52,10 @@ jobs:
       - uses: actions/upload-artifact@v4
         with:
           name: zentangle-preview-apk
-          path: android/app/build/outputs/apk/debug/app-debug.apk
+          path: android/app/build/outputs/apk/release/app-release.apk
           if-no-files-found: error
 
-      - run: cp android/app/build/outputs/apk/debug/app-debug.apk zentangle-preview.apk
+      - run: cp android/app/build/outputs/apk/release/app-release.apk zentangle-preview.apk
 
       - uses: softprops/action-gh-release@v2
         with:

@@ -1,5 +1,11 @@
 import React, { useEffect, useRef, useState } from "react";
-import { View, Image, Pressable, Keyboard, useWindowDimensions } from "react-native";
+import {
+  View,
+  Image,
+  Pressable,
+  Keyboard,
+  useWindowDimensions,
+} from "react-native";
 import { router } from "expo-router";
 import { T, Button, Field, Row, Shell, useColors } from "../components/ui";
 import { Lotus, LeafArt, Botanical } from "../components/Art";
@@ -126,9 +132,16 @@ export function Login() {
   const { height } = useWindowDimensions();
   const [keyboardOpen, setKeyboardOpen] = useState(false);
   useEffect(() => {
-    const shown = Keyboard.addListener("keyboardDidShow", () => setKeyboardOpen(true));
-    const hidden = Keyboard.addListener("keyboardDidHide", () => setKeyboardOpen(false));
-    return () => { shown.remove(); hidden.remove(); };
+    const shown = Keyboard.addListener("keyboardDidShow", () =>
+      setKeyboardOpen(true),
+    );
+    const hidden = Keyboard.addListener("keyboardDidHide", () =>
+      setKeyboardOpen(false),
+    );
+    return () => {
+      shown.remove();
+      hidden.remove();
+    };
   }, []);
   useEffect(() => {
     const tick = () =>
@@ -180,7 +193,8 @@ export function Login() {
     }
   };
   const verifyCode = async () => {
-    if (inFlight.current || !supabase || !sentPhone || !deliverySucceeded) return;
+    if (inFlight.current || !supabase || !sentPhone || !deliverySucceeded)
+      return;
     setError("");
     const token = latinDigits(code).trim();
     if (!/^\d{6}$/.test(token)) {
@@ -206,7 +220,15 @@ export function Login() {
     }
   };
   return (
-    <Shell title="" noNav back={false} centered scrollable={keyboardOpen || height < 640 || data.settings.font > 1}>
+    <Shell
+      title=""
+      noNav
+      back={false}
+      centered
+      scrollable={
+        keyboardOpen || height < 800 || signup || data.settings.font > 1
+      }
+    >
       <View style={{ alignItems: "center", gap: 5, marginBottom: 8 }}>
         <Lotus size={signup || height < 740 ? 44 : 68} />
         <T bold size={29}>
@@ -220,7 +242,9 @@ export function Login() {
           {sentPhone
             ? deliverySucceeded
               ? "کد تأیید به " + "0" + sentPhone.slice(3) + " ارسال شد."
-              : busy ? "در حال درخواست ارسال کد…" : "ارسال کد کامل نشد؛ پیام زیر را بررسی کنید و دوباره ارسال کنید."
+              : busy
+                ? "در حال درخواست ارسال کد…"
+                : "ارسال کد کامل نشد؛ پیام زیر را بررسی کنید و دوباره ارسال کنید."
             : "با شماره موبایل و کد پیامکی وارد شوید."}
         </T>
       </View>
