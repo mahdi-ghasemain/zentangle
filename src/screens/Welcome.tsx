@@ -6,6 +6,7 @@ import {
   Keyboard,
   useWindowDimensions,
 } from "react-native";
+import { SafeAreaView } from "react-native-safe-area-context";
 import { router } from "expo-router";
 import { T, Button, Field, Row, Shell, useColors } from "../components/ui";
 import { Lotus, LeafArt, Botanical } from "../components/Art";
@@ -17,24 +18,28 @@ export function Welcome() {
   const [step, setStep] = useState(0);
   const { patch } = useStore();
   const c = useColors();
-  const { width } = useWindowDimensions();
+  const { width, height } = useWindowDimensions();
+  const compact = height < 740;
+  const [artHeight, setArtHeight] = useState(100);
+  const artSize = Math.max(0, Math.min(300, width - 48, artHeight));
   return (
-    <Shell title="" noNav back={false}>
-      <View style={{ alignItems: "center", gap: 20 }}>
+    <SafeAreaView style={{ flex: 1, backgroundColor: c.bg }}>
+      <View style={{ flex: 1, minHeight: 0, width: "100%", maxWidth: 600, alignSelf: "center", paddingHorizontal: 20, paddingVertical: 8, gap: compact ? 8 : 16 }}>
+      <View onLayout={(e) => setArtHeight(e.nativeEvent.layout.height)} style={{ flex: 1, minHeight: 0, alignItems: "center", justifyContent: "center", overflow: "hidden" }}>
         {step === 0 ? (
           <View
             style={{
-              height: width > 700 ? 300 : 270,
+              height: "100%",
               width: "100%",
               alignItems: "center",
               justifyContent: "center",
             }}
           >
             <View style={{ position: "absolute", left: -15, bottom: 0 }}>
-              <Botanical size={130} />
+              <Botanical size={Math.min(100, artSize / 2)} />
             </View>
-            <Lotus size={80} />
-            <T size={49} bold style={{ color: c.green }}>
+            <Lotus size={Math.min(70, artSize / 4)} />
+            <T size={compact ? 36 : 49} bold style={{ color: c.green, lineHeight: compact ? 50 : 66 }}>
               هنر زندگی
             </T>
             <T center muted>
@@ -47,13 +52,14 @@ export function Welcome() {
         ) : step === 1 ? (
           <Image
             source={require("../../assets/hero.png")}
-            style={{ width: "100%", height: 330, borderRadius: 25 }}
+            style={{ width: "100%", height: "100%", borderRadius: 25 }}
             resizeMode="cover"
           />
         ) : (
-          <LeafArt size={300} />
+          <LeafArt size={artSize} />
         )}
-        <T center bold size={28}>
+      </View>
+        <T center bold size={compact ? 23 : 28} style={{ lineHeight: compact ? 32 : 40 }}>
           {
             [
               "هر خط، فرصتی برای آرامش",
@@ -62,7 +68,7 @@ export function Welcome() {
             ][step]
           }
         </T>
-        <T center muted size={17}>
+        <T center muted size={compact ? 15 : 17} style={{ lineHeight: compact ? 25 : 30 }}>
           {
             [
               "در کنار هم، از نقش‌های ساده به داستان‌های زیبای زندگی می‌رسیم.",
@@ -71,7 +77,7 @@ export function Welcome() {
             ][step]
           }
         </T>
-        {step === 0 && <LeafArt size={180} />}
+
         <Row style={{ justifyContent: "center", marginVertical: 7 }}>
           {[0, 1, 2].map((i) => (
             <Pressable
@@ -87,7 +93,7 @@ export function Welcome() {
             />
           ))}
         </Row>
-        <View style={{ width: "100%", gap: 10 }}>
+        <View style={{ width: "100%", gap: 4, flexShrink: 0 }}>
           <Button
             label={step === 2 ? "شروع مسیر من" : "ادامه"}
             onPress={() => {
@@ -111,7 +117,7 @@ export function Welcome() {
           </Pressable>
         </View>
       </View>
-    </Shell>
+    </SafeAreaView>
   );
 }
 
@@ -119,7 +125,7 @@ export function Login() {
   const [signup, setSignup] = useState(false);
   const [phone, setPhone] = useState("");
   const [sentPhone, setSentPhone] = useState("");
-  const [deliverySucceeded, setDeliverySucceeded] = useState(false);
+  const [requestAccepted, setRequestAccepted] = useState(false);
   const [code, setCode] = useState("");
   const [name, setName] = useState("");
   const [busy, setBusy] = useState(false);
@@ -169,7 +175,7 @@ export function Login() {
       return;
     }
     setSentPhone(normalized);
-    setDeliverySucceeded(false);
+    setRequestAccepted(false);
     setCode("");
     inFlight.current = true;
     setBusy(true);
@@ -182,7 +188,7 @@ export function Login() {
         },
       });
       if (authError) throw authError;
-      setDeliverySucceeded(true);
+      setRequestAccepted(true);
       setCode("");
       setRetryAt(Date.now() + 60000);
     } catch (e) {
@@ -193,7 +199,7 @@ export function Login() {
     }
   };
   const verifyCode = async () => {
-    if (inFlight.current || !supabase || !sentPhone || !deliverySucceeded)
+    if (inFlight.current || !supabase || !sentPhone || !requestAccepted)
       return;
     setError("");
     const token = latinDigits(code).trim();
@@ -246,8 +252,8 @@ export function Login() {
         {!keyboardOpen && (
           <T muted center size={compact ? 13 : 16}>
             {sentPhone
-              ? deliverySucceeded
-                ? "کد تأیید به " + "0" + sentPhone.slice(3) + " ارسال شد."
+              ? requestAccepted
+                ? "درخواست ارسال به " + "0" + sentPhone.slice(3) + " پذیرفته شد. دریافت پیامک ممکن است کمی طول بکشد."
                 : busy
                   ? "در حال درخواست ارسال کد…"
                   : "ارسال کد کامل نشد؛ پیام زیر را بررسی کنید و دوباره ارسال کنید."
@@ -296,12 +302,12 @@ export function Login() {
               }}
               onSubmitEditing={verifyCode}
             />
-            {remaining === 0 && !keyboardOpen && (
+            {!keyboardOpen && (
               <Button
                 small={compact}
                 secondary
-                disabled={busy}
-                label="ارسال مجدد کد"
+                disabled={busy || remaining > 0}
+                label={remaining > 0 ? "ارسال مجدد تا " + remaining.toLocaleString("fa-IR") + " ثانیه دیگر" : "ارسال مجدد کد"}
                 onPress={sendCode}
               />
             )}
@@ -377,7 +383,7 @@ export function Login() {
                     " ثانیه دیگر"
                   : "دریافت کد تأیید"
           }
-          disabled={busy || (sentPhone ? !deliverySucceeded : remaining > 0)}
+          disabled={busy || (sentPhone ? !requestAccepted : remaining > 0)}
           onPress={sentPhone ? verifyCode : sendCode}
         />
         {!keyboardOpen && (

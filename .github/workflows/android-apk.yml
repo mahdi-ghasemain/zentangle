@@ -59,11 +59,11 @@ jobs:
           path: android/app/build/outputs/apk/release/app-release.apk
           if-no-files-found: error
 
-      - run: cp android/app/build/outputs/apk/release/app-release.apk honarezendegi-android-1.0.3.apk
+      - run: cp android/app/build/outputs/apk/release/app-release.apk honarezendegi-android-1.0.4.apk
 
       - uses: softprops/action-gh-release@v2
         with:
-          tag_name: android-v1.0.3
-          name: هنر زندگی نسخهٔ ۱.۰.۳ برای اندروید
-          body: فایل نصب اندروید هنر زندگی نسخهٔ ۱.۰.۳.
-          files: honarezendegi-android-1.0.3.apk
+          tag_name: android-v1.0.4
+          name: هنر زندگی نسخهٔ ۱.۰.۴ برای اندروید
+          body: فایل نصب اندروید هنر زندگی نسخهٔ ۱.۰.۴.
+          files: honarezendegi-android-1.0.4.apk
