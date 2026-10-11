@@ -109,3 +109,31 @@ test("diagnostics never expose provider messages, credentials, phone or OTP", as
   assert.equal((await handler(request())).status, 502);
   assert.deepEqual(events, [{ event: "sms_provider_rejected", providerCode: 17 }]);
 });
+
+test("quota reasons return 429, database failure returns 503, neither sends SMS", async () => {
+  for (const reason of ["cooldown", "phone_daily", "daily_budget", "configuration"]) {
+    let calls = 0;
+    const events = [];
+    const response = await createSmsHandler({ ...config,
+      authorize: async () => ({ allowed: false, reason }),
+      report: e => events.push(e),
+      fetcher: async () => { calls++; return Response.json({ success: true }); },
+    })(request());
+    assert.equal(response.status, reason === "configuration" ? 503 : 429);
+    assert.equal(calls, 0);
+    assert.equal(events.length, 1);
+  }
+  const response = await createSmsHandler({ ...config,
+    authorize: async () => { throw new Error("private database error"); },
+    report: () => {},
+  })(request());
+  assert.equal(response.status, 503);
+  assert.equal((await response.text()).includes("private"), false);
+});
+test("structured quota approval permits delivery", async () => {
+ const response = await createSmsHandler({ ...config,
+   authorize: async () => ({ allowed: true }),
+   fetcher: async () => Response.json({ success: true }),
+ })(request());
+ assert.equal(response.status, 200);
+});

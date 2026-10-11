@@ -35,3 +35,10 @@ test("Iranian phone formats and Persian/Arabic digits normalize identically", ()
     assert.equal(api.normalizeIranPhone(phone), null);
   assert.equal(api.latinDigits("۱۲٣۴۵۶"), "123456");
 });
+
+test("hook rate limits take priority over generic provider errors", () => {
+ assert.match(api.phoneAuthError({message:"hook returned 429"}), /محدود/);
+ assert.match(api.phoneAuthError({message:"SMS cooldown: wait 60 seconds"}), /یک دقیقه/);
+ assert.match(api.phoneAuthError({message:"SMS budget unavailable"}), /بررسی سهمیه/);
+ assert.doesNotMatch(api.phoneAuthError({status:429,message:"sms service hook"}), /رد کرد/);
+});

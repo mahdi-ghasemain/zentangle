@@ -16,6 +16,16 @@ export function phoneAuthError(error: unknown, verifying = false): string {
   const detail = error as { code?: string; status?: number; message?: string; name?: string };
   const code = detail?.code;
   const message = detail?.message ?? "";
+  if (/SMS cooldown/i.test(message))
+    return "برای ارسال دوباره، یک دقیقه از درخواست قبلی صبر کنید.";
+  if (/SMS phone daily/i.test(message))
+    return "سهمیهٔ امروز این شماره تمام شده است؛ پس از ساعت ۳:۳۰ بامداد به وقت ایران دوباره تلاش کنید.";
+  if (/SMS daily budget/i.test(message))
+    return "سهمیهٔ روزانهٔ ارسال برنامه تمام شده است؛ با پشتیبانی تماس بگیرید.";
+  if (/SMS budget unavailable/i.test(message))
+    return "بررسی سهمیهٔ پیامک موقتاً در دسترس نیست؛ کمی بعد دوباره تلاش کنید.";
+  if (detail?.status === 429 || code === "over_sms_send_rate_limit" || code === "over_request_rate_limit" || /hook.*429/i.test(message))
+    return "ارسال پیامک موقتاً محدود شده است؛ درخواست‌های پی‌درپی ندهید و کمی بعد تلاش کنید.";
   if (/sms delivery|sms service|sms.*provider|hook/i.test(message))
     return "سرویس ارسال پیامک درخواست را رد کرد؛ تنظیمات اتصال پیامک باید بررسی شود.";
   if (/signups? not allowed|signup.*disabled|user.*not found/i.test(message))

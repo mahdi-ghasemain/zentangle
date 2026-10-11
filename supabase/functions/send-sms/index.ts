@@ -14,11 +14,12 @@ Deno.serve(
         Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!,
         { auth: { persistSession: false } },
       );
-      const { data, error } = await db.rpc("reserve_sms", {
+      const { data, error } = await db.rpc("reserve_sms_v2", {
         p_phone: phone,
         p_daily_limit: Number(Deno.env.get("SMS_DAILY_LIMIT") ?? "100"),
       });
-      return !error && data === true;
+      if (error) throw new Error("SMS budget unavailable");
+      return data;
     },
     verify: (body: string, headers: Record<string, string>) => {
       if (!webhook) throw new Error("Missing hook secret");

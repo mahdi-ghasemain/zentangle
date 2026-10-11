@@ -33,8 +33,28 @@ export function createSmsHandler({
     )
       return fail(400, "Invalid SMS payload");
     try {
-      if (!authorize || !(await authorize(phone.replace(/^\+/, ""))))
-        return fail(429, "SMS limit reached");
+      let decision;
+      try {
+        if (!authorize) throw new Error("Missing authorization");
+        decision = await authorize(phone.replace(/^\+/, ""));
+      } catch {
+        report({ event: "sms_budget_unavailable" });
+        return fail(503, "SMS budget unavailable");
+      }
+      if (decision !== true && decision?.allowed !== true) {
+        const reason = decision?.reason;
+        const messages = {
+          cooldown: "SMS cooldown: wait 60 seconds",
+          phone_daily: "SMS phone daily limit reached",
+          daily_budget: "SMS daily budget reached",
+        };
+        if (!messages[reason]) {
+          report({ event: "sms_budget_unavailable" });
+          return fail(503, "SMS budget unavailable");
+        }
+        report({ event: "sms_rate_limited", reason });
+        return fail(429, messages[reason]);
+      }
       const response = await fetcher(
         "https://api.limosms.com/api/sendpatternmessage",
         {
